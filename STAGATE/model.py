@@ -12,7 +12,7 @@ class GATE():
         self.weight_decay = weight_decay
 
     def __call__(self, A, prune_A, X):
-        # Encoder
+        # Encoder 编码器
         H = X
         for layer in range(self.n_layers):
             H = self.__encoder(A, prune_A, H, layer)
@@ -22,7 +22,7 @@ class GATE():
         # Final node representations
         self.H = H
 
-        # Decoder
+        # Decoder 解码器
         for layer in range(self.n_layers - 1, -1, -1):
             H = self.__decoder(H, layer)
             if self.nonlinear:
@@ -30,14 +30,14 @@ class GATE():
                     H = tf.nn.elu(H)
         X_ = H
         
-        # The reconstruction loss of node features
+        # The reconstruction loss of node features 节点特征的重建损失
         features_loss = tf.sqrt(tf.reduce_sum(tf.reduce_sum(tf.pow(X - X_, 2))))
 
         for layer in range(self.n_layers):
             weight_decay_loss = 0
             weight_decay_loss += tf.multiply(tf.nn.l2_loss(self.W[layer]), self.weight_decay, name='weight_loss')
 
-        # Total loss
+        # Total loss 损失函数
         self.loss = features_loss  + weight_decay_loss
 
         if self.alpha == 0:
@@ -47,7 +47,7 @@ class GATE():
             self.Att_l = {'C': self.C, 'prune_C': self.prune_C}
         return self.loss, self.H, self.Att_l, X_
 
-
+    # Encoder 编码器
     def __encoder(self, A, prune_A, H, layer):
         H = tf.matmul(H, self.W[layer])
         if layer == self.n_layers-1:
@@ -59,7 +59,7 @@ class GATE():
             self.prune_C[layer] = self.graph_attention_layer(prune_A, H, self.prune_v[layer], layer)
             return (1-self.alpha)*tf.sparse_tensor_dense_matmul(self.C[layer], H) + self.alpha*tf.sparse_tensor_dense_matmul(self.prune_C[layer], H)
 
-
+     # Decoder 解码器
     def __decoder(self, H, layer):
         H = tf.matmul(H, self.W[layer], transpose_b=True)
         if layer == 0:
@@ -69,7 +69,7 @@ class GATE():
         else:
             return (1-self.alpha)*tf.sparse_tensor_dense_matmul(self.C[layer-1], H) + self.alpha*tf.sparse_tensor_dense_matmul(self.prune_C[layer-1], H)
 
-
+     #权重？
     def define_weights(self, hidden_dims):
         W = {}
         for i in range(self.n_layers):
@@ -93,7 +93,7 @@ class GATE():
             prune_Ws_att[i] = prune_v
 
         return W, Ws_att, prune_Ws_att
-
+    #图注意力层
     def graph_attention_layer(self, A, M, v, layer):
 
         with tf.variable_scope("layer_%s"% layer):
